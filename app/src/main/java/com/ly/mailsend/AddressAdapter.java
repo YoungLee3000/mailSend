@@ -20,11 +20,10 @@ public class AddressAdapter  extends RecyclerView.Adapter<AddressAdapter.MyViewH
     private  Context mContext;
     private  List<Address> mData;
 
-    public AddressAdapter(Context context) {
+    public AddressAdapter(Context context , List<Address> list) {
         mLayoutInflater = LayoutInflater.from(context);
         mContext = context;
-
-
+        this.mData = list;
     }
 
     /**
@@ -38,10 +37,6 @@ public class AddressAdapter  extends RecyclerView.Adapter<AddressAdapter.MyViewH
         return new AddressAdapter.MyViewHolder(mLayoutInflater.inflate(R.layout.address_item, parent, false));
     }
 
-
-    public AddressAdapter(List<Address> list) {
-            this.mData = list;
-    }
 
 
     /**

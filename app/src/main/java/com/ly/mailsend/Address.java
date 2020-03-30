@@ -16,6 +16,10 @@ public class Address {
 
     private String detail;
 
+    public  Address(){
+
+    }
+
     public Address(String name, String phoneNumber,
                    String province, String city, String county,
                    String street, String detail) {
