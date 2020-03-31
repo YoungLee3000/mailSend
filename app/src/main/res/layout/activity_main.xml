@@ -15,15 +15,14 @@
     <EditText
         android:id="@+id/edit_userID"
         app:layout_constraintHorizontal_weight="7"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="40dp"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
         android:background="@drawable/bg_edit_text"
         android:hint="输入用户ID"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintRight_toLeftOf="@id/btn_query"
         app:layout_constraintLeft_toLeftOf="parent"/>
 
     <Button
@@ -31,14 +30,13 @@
         android:background="@drawable/set_btn"
         android:text="查询"
         android:textSize="22sp"
-        app:layout_constraintHorizontal_weight="3"
+        android:layout_marginLeft="10dp"
+        android:layout_marginTop="20dp"
         android:layout_marginRight="10dp"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintLeft_toRightOf="@id/edit_userID"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintBaseline_toBaselineOf="@id/edit_userID"/>
+        app:layout_constraintTop_toBottomOf="@id/edit_userID"
+        app:layout_constraintLeft_toLeftOf="parent" />
 
 
     <View

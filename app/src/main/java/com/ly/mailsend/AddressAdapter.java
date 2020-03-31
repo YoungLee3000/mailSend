@@ -53,8 +53,8 @@ public class AddressAdapter  extends RecyclerView.Adapter<AddressAdapter.MyViewH
         holder.label.setText(address.getName().substring(0,1));
         final String headStr = address.getName() + "  " + address.getPhoneNumber();
         holder.head.setText(headStr);
-        String containStr = address.getProvince() + " " + address.getCity() + " " +
-                            address.getCounty() + " " + address.getStreet() + "\n" +
+        String containStr = address.getProvince() + "  " + address.getCity() + "  " +
+                            address.getCounty() + "  " + address.getStreet() + "\n" +
                             address.getDetail();
         holder.contain.setText(containStr);
         holder.confirm.setText("确认");
@@ -68,6 +68,15 @@ public class AddressAdapter  extends RecyclerView.Adapter<AddressAdapter.MyViewH
                     mOnItemClickListener.onItemClick(holder.confirm,pos);
                 }
             });
+
+            holder.contain.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    int pos = holder.getLayoutPosition();
+                    mOnItemClickListener.onItemClick(holder.contain,pos);
+                }
+            });
+
         }
 
 

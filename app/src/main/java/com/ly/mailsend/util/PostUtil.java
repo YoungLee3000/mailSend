@@ -245,13 +245,77 @@ public class PostUtil
 
 
     /**
+     * 上传文件至服务器
+     * @param uploadUrl
+     * @param uploadFile
+     * @return
+     */
+    public static String upload(String uploadUrl, String uploadFile) {
+        String fileName = "";
+        int pos = uploadFile.lastIndexOf("/");
+        if (pos >= 0) {
+            fileName = uploadFile.substring(pos + 1);
+            Log.d(Constants.TAG,"fileName is " + fileName);
+        }
+
+        String end = "\r\n";
+        String Hyphens = "--";
+        String boundary = "**********";
+        try {
+            URL url = new URL(uploadUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            conn.setUseCaches(false);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Connection", "Keep-Alive");
+            conn.setRequestProperty("Charset", "UTF-8");
+            conn.setRequestProperty("Content-Type",
+                    "multipart/form-data;boundary=" + boundary);
+
+            DataOutputStream ds = new DataOutputStream(conn.getOutputStream());
+            ds.writeBytes(Hyphens + boundary + end);
+            ds.writeBytes("Content-Disposition: form-data; "
+                    + "name=\"upFile\";filename=\"" + fileName + "\"" + end);
+            ds.writeBytes(end);
+            FileInputStream fStream = new FileInputStream(uploadFile);
+            // 每次写入1024字节
+            int bufferSize = 1024;
+            byte[] buffer = new byte[bufferSize];
+            int length = -1;
+            // 将文件数据写入到缓冲区
+            while((length = fStream.read(buffer)) != -1) {
+                ds.write(buffer, 0, length);
+            }
+            ds.writeBytes(end);
+            ds.writeBytes(Hyphens + boundary + Hyphens + end);
+            fStream.close();
+            ds.flush();
+            // 获取返回内容
+            InputStream is = conn.getInputStream();
+            int ch;
+            StringBuffer b = new StringBuffer();
+            while ((ch = is.read()) != -1) {
+                b.append((char) ch);
+            }
+            closeStream(ds);
+//            return "SUCC";
+            return b.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "上传失败:" + e.getMessage();
+        }
+    }
+
+
+    /**
      * 往服务器上上传文本  比如log日志
      * @param urlstr        请求的url
      * @param uploadFile    log日志的路径
      * @param newName    log日志的名字 LOG.log
      * @return
      */
-    public static void httpPostFile(Activity activity, String urlstr, String uploadFile, String newName) {
+    public static String httpPostFile(Activity activity, String urlstr, String uploadFile, String newName) {
         String end = "\r\n";
         String twoHyphens = "--";
         String boundary = "*****";//边界标识
@@ -259,6 +323,7 @@ public class PostUtil
         HttpURLConnection con = null;
         DataOutputStream ds = null;
         InputStream is = null;
+        StringBuffer b = null;
         try {
             URL url = new URL(urlstr);
             con = (HttpURLConnection) url.openConnection();
@@ -279,7 +344,7 @@ public class PostUtil
             ds = new DataOutputStream(con.getOutputStream());
             ds.writeBytes(twoHyphens + boundary + end);
             ds.writeBytes("Content-Disposition: form-data; "
-                    + "name=\"stblog\";filename=\"" + newName + "\"" + end);
+                    + "name=\"file\";filename=\"" + newName + "\"" + end);
             ds.writeBytes(end);
 
             // 取得文件的FileInputStream
@@ -301,14 +366,14 @@ public class PostUtil
             /* 取得Response内容 */
             is = con.getInputStream();
             int ch;
-            StringBuffer b = new StringBuffer();
+            b = new StringBuffer();
             while ((ch = is.read()) != -1) {
                 b.append((char) ch);
             }
             /* 将Response显示于Dialog */
-            showDialog(activity,true,uploadFile,"上传成功" + b.toString().trim());
+//            showDialog(activity,true,uploadFile,"上传成功" + b.toString().trim());
         } catch (Exception e) {
-            showDialog(activity,false,uploadFile,"上传失败" + e);
+//            showDialog(activity,false,uploadFile,"上传失败" + e);
         }finally {
             /* 关闭DataOutputStream */
             closeStream(ds);
@@ -317,6 +382,8 @@ public class PostUtil
                 con.disconnect();
             }
         }
+
+        return b.toString();
     }
 
 
