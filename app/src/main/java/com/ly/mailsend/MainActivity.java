@@ -16,12 +16,17 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.ly.mailsend.util.PostUtil;
 
 import java.lang.ref.SoftReference;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +37,8 @@ public class MainActivity extends BaseActivity {
 
     private static final int CHANGE_PROCESS = 2;
 
+    private static final int CHANGE_FAILURE = 3;
+
 
     private EditText mEditUser;
 
@@ -39,12 +46,14 @@ public class MainActivity extends BaseActivity {
 
     private RecyclerView mRVAddress;
 
-    private AddressAdapter addressAdapter;
+    private MailInfoAdapter mailInfoAdapter;
 
-    private List<Address> addressList = new ArrayList<>();
+    private List<MailInfo> mailInfoList = new ArrayList<>();
+
 
     private String dataUrl = "http://www.gutejersy.com/android/getAddress.php";
 
+//    private String dataUrl = "https://www.nlsmall.com/emsExpress/support.do?sendQuery";
     private MyHandler myHandler = new MyHandler(this);
 
     private ProgressDialog mDialog;
@@ -65,34 +74,39 @@ public class MainActivity extends BaseActivity {
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
 
 
-        addressAdapter = new AddressAdapter(this,addressList);
+        mailInfoAdapter = new MailInfoAdapter(this,mailInfoList);
 
 
-        addressAdapter.setOnItemClickListener(new AddressAdapter.OnItemClickListener() {
+        mailInfoAdapter.setOnItemClickListener(new MailInfoAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
 
-                Address address = addressList.get(position);
-
-                String textHead = address.getName() + "  "  + address.getPhoneNumber();
-                String textContain = address.getProvince() + "  " + address.getCity() + "  " +
-                                     address.getCounty() + "  "  + address.getStreet() + "\n" +
-                                     address.getDetail();
+                MailInfo mailInfo = mailInfoList.get(position);
 
 
-                Intent intent = new Intent(MainActivity.this,VerifyActivity.class);
-                intent.putExtra("user id", mEditUser.getText().toString());
-                intent.putExtra("text head",textHead);
-                intent.putExtra("text contain", textContain);
+
+                Intent intent = new Intent(MainActivity.this,EditInfoActivity.class);
+
+                intent.putExtra("sender name",mailInfo.getSenderName());
+                intent.putExtra("sender phone",mailInfo.getSenderPhone());
+                intent.putExtra("sender address",mailInfo.getSenderAddress());
+                intent.putExtra("receiver name",mailInfo.getReceiverName());
+                intent.putExtra("receiver phone",mailInfo.getReceiverPhone());
+                intent.putExtra("receiver address",mailInfo.getReceiverAddress());
+                intent.putExtra("send type",mailInfo.getSendType());
+                intent.putExtra("send weight",mailInfo.getSendWeight());
+                intent.putExtra("send code",mailInfo.getSendCode());
+
                 intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                 startActivity(intent);
 
             }
         });
 
-        mRVAddress.setAdapter(addressAdapter);
-        mRVAddress.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false));
-
+        mRVAddress.setAdapter(mailInfoAdapter);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false);
+//        linearLayoutManager.setStackFromEnd(true);
+        mRVAddress.setLayoutManager(linearLayoutManager);
 
         mBtnQuery.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -108,18 +122,20 @@ public class MainActivity extends BaseActivity {
                     {
 
                         Map<String,String> map = new HashMap<>();
-                        map.put("userid",para);
+                        Date d1 = new Date(System.currentTimeMillis());
+                        DateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
+                        map.put("barcodedata",para);
+                        map.put("optime",df.format(d1));
 
 //                        myHandler.sendEmptyMessage(CHANGE_SUCCESS);
 
                         String response = PostUtil.sendPost(
                                 dataUrl,map,"utf-8");
-                        addressList.clear();
-                        addressList.addAll(PostUtil.parseJson(response));
+                        mailInfoList.clear();
+                        mailInfoList.addAll(PostUtil.parseJson(response));
 
-
-
-                        myHandler.sendEmptyMessage(CHANGE_SUCCESS);
+                        myHandler.sendEmptyMessage(mailInfoList.size() > 0 ?
+                                CHANGE_SUCCESS : CHANGE_FAILURE );
 
                     }
 
@@ -182,10 +198,14 @@ public class MainActivity extends BaseActivity {
             switch (msg.what) {
                 case CHANGE_SUCCESS:
                     mainActivity.cancelDialog();
-                    mainActivity.addressAdapter.notifyDataSetChanged();
+                    mainActivity.mailInfoAdapter.notifyDataSetChanged();
                     break;
                 case CHANGE_PROCESS:
                     mainActivity.showLoadingWindow("数据查询中");
+                    break;
+                case CHANGE_FAILURE:
+                    Toast.makeText(mainActivity,"查询失败",Toast.LENGTH_SHORT).show();
+                    mainActivity.cancelDialog();
                     break;
             }
 

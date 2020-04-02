@@ -13,6 +13,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.ly.mailsend.Address;
+import com.ly.mailsend.MailInfo;
 
 
 import java.io.BufferedReader;
@@ -138,39 +139,66 @@ public class PostUtil
 
 
     /**
-     * 解析json数据
+     * 解析返回的json结果
      * @param result
      * @return
      */
-    public static List<Address> parseJson(String result)
+    public static String parseJsonResult(String result)
     {
 
-        JSONArray jsonArray = JSON.parseArray(result);
-        //JSONArray jsonArray1 = JSONArray.parseArray(JSON_ARRAY_STR);//因为JSONArray继承了JSON，所以这样也是可以的
+        String resultStr = "";
 
-
-        //遍历方式2
-        List<Address> resultList = new ArrayList<>();
         try {
-            for (Object obj : jsonArray) {
-                JSONObject jsonObject = (JSONObject) obj;
-                Address address = new Address();
-                address.setName(jsonObject.getString("name"));
-                address.setPhoneNumber(jsonObject.getString("phoneNumber"));
-                address.setProvince(jsonObject.getString("province"));
-                address.setCity(jsonObject.getString("city"));
-                address.setCounty(jsonObject.getString("county"));
-                address.setStreet(jsonObject.getString("street"));
-                address.setDetail(jsonObject.getString("detail"));
-                resultList.add(address);
-            }
+            JSONObject jsonObject = (JSONObject) JSON.parse(result);
+            resultStr = jsonObject.getString("resultcode");
         } catch (Exception e) {
             e.printStackTrace();
         }
 
 
+        return resultStr;
+    }
 
-        return resultList;
+
+    /**
+     * 解析json数据数组
+     * @param result
+     * @return
+     */
+    public static List<MailInfo> parseJson(String result)
+    {
+
+//        JSONArray jsonArray = JSON.parseArray(result);
+        //JSONArray jsonArray1 = JSONArray.parseArray(JSON_ARRAY_STR);//因为JSONArray继承了JSON，所以这样也是可以的
+
+        List<MailInfo> mailInfoList = new ArrayList<>();
+
+        try {
+            JSONObject jsonResult = (JSONObject) JSON.parse(result);
+            if ("0000".equals(jsonResult.getString("result"))) {
+                JSONArray jsonArray = JSON.parseArray(jsonResult.getString("sendArray"));
+                for (Object obj : jsonArray) {
+                    JSONObject jsonObject = (JSONObject) obj;
+                    MailInfo mailInfo = new MailInfo();
+                    mailInfo.setReceiverName(jsonObject.getString("receiwer_name"));
+                    mailInfo.setReceiverPhone(jsonObject.getString("receiwer_phone"));
+                    mailInfo.setReceiverAddress(jsonObject.getString("receiwer_adress"));
+                    mailInfo.setSenderName(jsonObject.getString("sender_name"));
+                    mailInfo.setSenderPhone(jsonObject.getString("sender_phone"));
+                    mailInfo.setSenderAddress(jsonObject.getString("sender_adress"));
+                    mailInfo.setSendCode(jsonObject.getString("sendcode"));
+                    mailInfo.setSendType(jsonObject.getString("send_type"));
+                    mailInfo.setSendWeight(jsonObject.getFloat("send_weight") );
+
+                    mailInfoList.add(mailInfo);
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return mailInfoList;
     }
 
 
@@ -187,7 +215,7 @@ public class PostUtil
     {
 
         OutputStream output=null;
-        String [] strArray = cachePath.split("/");
+        String [] strArray = urlStr.split("/");
         String fileName = strArray[strArray.length - 1];
 
         String pathName = "";

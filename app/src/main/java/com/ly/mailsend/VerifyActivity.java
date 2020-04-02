@@ -16,6 +16,8 @@ import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -52,6 +54,7 @@ import java.util.Map;
 public class VerifyActivity extends BaseActivity implements View.OnClickListener{
 
 
+    //界面信息
     private Button mTakePhoto, mGenCert;
     private TextView mTVInfo;
     private ImageView mPicture;
@@ -76,6 +79,11 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
     private boolean gIfImage = false;
     private String mFilestr = "";
 
+
+    //下载信息
+    private String downloadStr = "";
+    private String mCertStr = "";
+
     //底部弹出框按钮
     private View bInflate;
     private TextView bChoosePhoto;
@@ -90,6 +98,8 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
     //静态Handler
     private static final int CHANGE_SUCCESS = 1;
     private static final int CHANGE_PROCESS = 2;
+    private static final int CHANGE_MEDIUM = 3;
+    private static final int CHANGE_TOAST = 4;
     private MyHandler myHandler = new MyHandler(this);
 
     /**
@@ -109,9 +119,18 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
             switch (msg.what) {
                 case CHANGE_SUCCESS:
                     verifyActivity.cancelDialog();
+                    verifyActivity.jumpToShow();
                     break;
                 case CHANGE_PROCESS:
                     verifyActivity.showLoadingWindow("数据查询中");
+                    break;
+                case CHANGE_MEDIUM:
+                    Toast.makeText(verifyActivity,"上传图片完成，开始下载网证",Toast.LENGTH_SHORT).show();
+                    break;
+                case CHANGE_TOAST:
+                    String str = (String) msg.obj;
+                    Toast.makeText(verifyActivity,str,Toast.LENGTH_SHORT).show();
+                    verifyActivity.cancelDialog();
                     break;
             }
 
@@ -142,7 +161,7 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
         mGenCert = (Button) findViewById(R.id.bt_gen_cert);
         mTVInfo  = (TextView) findViewById(R.id.text_info);
 
-        String textTotal = mTextHead + "\n" + mTextContain;
+        final String textTotal = mTextHead + "\n" + mTextContain;
         mTVInfo.setText(textTotal);
 
         mTakePhoto.setOnClickListener(new View.OnClickListener() {
@@ -166,17 +185,42 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
                         String[] strArray = mFilestr.split("/");
                         String fileName = strArray[strArray.length -1];
 
-
                         Log.d(Constants.TAG,"if set image " + gIfImage);
                         String response = gIfImage
                                 ? PostUtil.upload(dataUrl+mUserId,mFilestr)
-//                                ? PostUtil.httpPostFile(VerifyActivity.this,
-//                                        dataUrl+mUserId,mFilestr,fileName)
                                 : PostUtil.sendPost(dataUrl+mUserId,
                                     new HashMap<String, String>(),"utf-8");
+                        String postResult =  PostUtil.parseJsonResult(response);
                         Log.d(Constants.TAG,response);
 
-                        myHandler.sendEmptyMessage(CHANGE_SUCCESS);
+                        Message toastMeg = Message.obtain();
+                        toastMeg.what = CHANGE_TOAST;
+
+                        boolean ifDownload = !"".equals(postResult) && !"0".equals(postResult);
+                        //根据上传结果提示不同信息
+                        if (ifDownload){
+                            myHandler.sendEmptyMessage(CHANGE_MEDIUM);
+                            downloadStr = postResult;
+                        }
+                        else{
+                            toastMeg.obj = "上传图片失败";
+                            myHandler.sendMessage(toastMeg);
+                        }
+
+                        //开始网证下载
+                        if (ifDownload){
+
+                            if (isNetworkAvailable(VerifyActivity.this)){
+                                String downResult =PostUtil.getDownloadFile2Cache
+                                        (downloadStr,"mailfigure");
+                                myHandler.sendEmptyMessage(CHANGE_SUCCESS);
+                            }
+                            else {
+                                toastMeg.obj = "网络未连接";
+                                myHandler.sendMessage(toastMeg);
+                            }
+
+                        }
 
                     }
 
@@ -186,6 +230,42 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
 
     }
 
+
+    /**
+     * 判断网络是否可用
+     * @param context
+     * @return
+     */
+    private boolean isNetworkAvailable(Context context) {
+
+        ConnectivityManager manager = (ConnectivityManager) context
+                .getApplicationContext().getSystemService(
+                        Context.CONNECTIVITY_SERVICE);
+
+        if (manager == null) {
+            return false;
+        }
+
+        NetworkInfo networkinfo = manager.getActiveNetworkInfo();
+
+        if (networkinfo == null || !networkinfo.isAvailable()) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+
+    /**
+     * 跳转到网证显示页面
+     */
+    protected void jumpToShow(){
+        Intent intent = new Intent(VerifyActivity.this,QRCodeActivity.class);
+        intent.putExtra("certificate",mCertStr);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        startActivity(intent);
+    }
 
 
     /**

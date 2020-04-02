@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -21,9 +21,8 @@
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
         android:background="@drawable/bg_edit_text"
-        android:hint="输入用户ID"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"/>
+        android:hint="输入二维码数据"
+        android:layout_alignParentTop="true"/>
 
     <Button
         android:id="@+id/btn_query"
@@ -35,8 +34,7 @@
         android:layout_marginRight="10dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/edit_userID"
-        app:layout_constraintLeft_toLeftOf="parent" />
+        android:layout_below="@id/edit_userID" />
 
 
     <View
@@ -45,8 +43,7 @@
         android:layout_marginTop="10dp"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btn_query"
+        android:layout_below="@id/btn_query"
         />
 
 
@@ -54,9 +51,16 @@
         android:id="@+id/rv_address"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/text_line"/>
+        android:layout_below="@id/text_line"
+        android:scrollbars="vertical"/>
+
+    <View
+        android:id="@+id/v_line_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_below="@id/rv_address"/>
 
 
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</RelativeLayout>
