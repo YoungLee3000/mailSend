@@ -38,6 +38,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.ly.mailsend.util.BitMapUtil;
 import com.ly.mailsend.util.Constants;
 import com.ly.mailsend.util.PostUtil;
 
@@ -45,6 +46,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -56,7 +58,7 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
 
     //界面信息
     private Button mTakePhoto, mGenCert;
-    private TextView mTVInfo;
+    private TextView mTVInfo, mTVTip;
     private ImageView mPicture;
     private static final String PERMISSION_WRITE_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE;
     private static final int REQUEST_PERMISSION_CODE = 267;
@@ -69,19 +71,37 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
     private File imageFile;
 
     //从主界面传来的信息
+    private boolean mIfDanger = false;
     private String mTextHead;
     private String mTextContain;
     private String mUserId;
 
+    private String reName,rePhone,reAddress,seName,sePhone,seAddress,goodType,goodWeight,goodCode;
+
     //上传信息
-    private String dataUrl = "http://www.gutejersy.com/android/getFile.php?userid=";
+//    private String uploadUrl = "http://www.gutejersy.com/android/getFile.php";
+//    private String dataUrl = "http://www.gutejersy.com/android/getPath.php";
+//    private boolean mIfJson = false;
+
+    private String uploadUrl = "http://www.nlsmall.com/emsExpress/support.do?upload";
+    private String dataUrl = "http://www.nlsmall.com/emsExpress/support.do?uploadPackage";
+
+    //本地地址
+//    private String uploadUrl = "http://192.168.74.131:8080/emsExpress/support.do?upload";
+//    private String dataUrl = "http://192.168.74.131:8080/emsExpress/support.do?uploadPackage";
+//
+    private boolean mIfJson = true;
+
 
     private boolean gIfImage = false;
-    private String mFilestr = "";
+    private String mFileStr = "";
+    private  String mServerFileStr = "";
+
+    private String mCorrectResult = "0000";
 
 
     //下载信息
-    private String downloadStr = "";
+    private String mDownloadStr = "";
     private String mCertStr = "";
 
     //底部弹出框按钮
@@ -116,6 +136,7 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
         @Override
         public void handleMessage(Message msg){
             final VerifyActivity verifyActivity = mySoftReference.get();
+            String str = (String) msg.obj;
             switch (msg.what) {
                 case CHANGE_SUCCESS:
                     verifyActivity.cancelDialog();
@@ -125,10 +146,9 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
                     verifyActivity.showLoadingWindow("数据查询中");
                     break;
                 case CHANGE_MEDIUM:
-                    Toast.makeText(verifyActivity,"上传图片完成，开始下载网证",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(verifyActivity,str,Toast.LENGTH_SHORT).show();
                     break;
                 case CHANGE_TOAST:
-                    String str = (String) msg.obj;
                     Toast.makeText(verifyActivity,str,Toast.LENGTH_SHORT).show();
                     verifyActivity.cancelDialog();
                     break;
@@ -143,9 +163,22 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
         setContentView(R.layout.activity_verify);
         setTitle("信息确认");
 
-        mTextHead = getIntent().getStringExtra("text head");
-        mTextContain = getIntent().getStringExtra("text contain");
-        mUserId = getIntent().getStringExtra("user id");
+
+
+
+        reName = getIntent().getStringExtra(Constants.RE_NAME);
+        rePhone = getIntent().getStringExtra(Constants.RE_PHONE);
+        reAddress = getIntent().getStringExtra(Constants.RE_ADDRESS);
+
+        seName = getIntent().getStringExtra(Constants.SE_NAME);
+        seAddress = getIntent().getStringExtra(Constants.SE_ADDRESS);
+        sePhone = getIntent().getStringExtra(Constants.SE_PHONE);
+
+        goodCode = getIntent().getStringExtra(Constants.SE_CODE);
+        goodType = getIntent().getStringExtra(Constants.SE_TYPE);
+        goodWeight = getIntent().getStringExtra(Constants.SE_WEIGHT) ;
+
+        mIfDanger = "高危物品".equals(goodType);
 
         /*申请读取存储的权限*/
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -160,8 +193,20 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
         mTakePhoto = (Button) findViewById(R.id.bt_take_photo);
         mGenCert = (Button) findViewById(R.id.bt_gen_cert);
         mTVInfo  = (TextView) findViewById(R.id.text_info);
+        mTVTip = (TextView) findViewById(R.id.text_tips);
 
-        final String textTotal = mTextHead + "\n" + mTextContain;
+        if (mIfDanger){
+            mTVTip.setText("邮寄高危物品，请确认信息后点击\"拍照\"保存图片，然后点击\"寄件码生成\"按钮获取寄件码");
+        }
+        else {
+            mTakePhoto.setVisibility(View.GONE);
+            mTVTip.setText("非高危物品，确认信息后直接点击按钮生成寄件码");
+        }
+
+
+        final String textTotal = " 收件人信息 \n" + "   " +  reName + " " + rePhone + "\n" + reAddress + "\n" +
+                                " 寄件人信息 \n" +  "   " +seName + " " + sePhone + "\n" + seAddress + "\n" +
+                                " 其它信息 \n" + "   " + goodType + " " + goodWeight + "kg" + "\n" + "单号:" +goodCode  ;
         mTVInfo.setText(textTotal);
 
         mTakePhoto.setOnClickListener(new View.OnClickListener() {
@@ -174,6 +219,8 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
         mGenCert.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+
                 showLoadingWindow("上传数据中");
                 new Thread()
                 {
@@ -181,46 +228,105 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
                     public void run()
                     {
 
-                        //上传照片
-                        String[] strArray = mFilestr.split("/");
-                        String fileName = strArray[strArray.length -1];
+                        while (true){
+                            Message toastMegStep1 = Message.obtain();
 
-                        Log.d(Constants.TAG,"if set image " + gIfImage);
-                        String response = gIfImage
-                                ? PostUtil.upload(dataUrl+mUserId,mFilestr)
-                                : PostUtil.sendPost(dataUrl+mUserId,
-                                    new HashMap<String, String>(),"utf-8");
-                        String postResult =  PostUtil.parseJsonResult(response);
-                        Log.d(Constants.TAG,response);
+                            //如何设置了图片则先上传
+                            String[] strArray = mFileStr.split("/");
+                            String fileName = strArray[strArray.length -1];
 
-                        Message toastMeg = Message.obtain();
-                        toastMeg.what = CHANGE_TOAST;
+                            if (mIfDanger){
+                                if ("".equals(mFileStr)){
+                                    toastMegStep1.obj = "图片未选择";
+                                    toastMegStep1.what = CHANGE_TOAST;
+                                    myHandler.sendMessage(toastMegStep1);
+                                    break;
+                                }
+                                //压缩图片
+                                String newFileStr = BitMapUtil.compressImage(mFileStr);
+                                String response1 = PostUtil.upload(uploadUrl,newFileStr);
+                                String uploadResult =  PostUtil.parseJsonResult(response1,"result");
+                                if ( ! mCorrectResult.equals(uploadResult) ){
+                                    toastMegStep1.obj = "上传图片失败,请检查网络";
+                                    toastMegStep1.what = CHANGE_TOAST;
+                                    myHandler.sendMessage(toastMegStep1);
+                                    break;
+                                }
+                                else{
+                                    toastMegStep1.obj = "上传图片成功，开始上传揽件信息";
+                                    toastMegStep1.what = CHANGE_MEDIUM;
+                                    mServerFileStr = PostUtil.parseJsonResult(response1,"serverPath");
+                                    myHandler.sendMessage(toastMegStep1);
+                                }
 
-                        boolean ifDownload = !"".equals(postResult) && !"0".equals(postResult);
-                        //根据上传结果提示不同信息
-                        if (ifDownload){
-                            myHandler.sendEmptyMessage(CHANGE_MEDIUM);
-                            downloadStr = postResult;
-                        }
-                        else{
-                            toastMeg.obj = "上传图片失败";
-                            myHandler.sendMessage(toastMeg);
-                        }
-
-                        //开始网证下载
-                        if (ifDownload){
-
-                            if (isNetworkAvailable(VerifyActivity.this)){
-                                String downResult =PostUtil.getDownloadFile2Cache
-                                        (downloadStr,"mailfigure");
-                                myHandler.sendEmptyMessage(CHANGE_SUCCESS);
-                            }
-                            else {
-                                toastMeg.obj = "网络未连接";
-                                myHandler.sendMessage(toastMeg);
                             }
 
+
+                            //上传揽件信息
+                            Message toastMegStep2 = Message.obtain();
+                            Map<String,String> map = new HashMap<>();
+                            Date d1 = new Date(System.currentTimeMillis());
+                            DateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
+                            map.put("optime",df.format(d1));
+                            map.put("sendcode",goodCode);
+                            map.put("sender_name",seName);
+                            map.put("sender_phone",sePhone);
+                            map.put("sender_adress",seAddress);
+                            map.put("receiwer_name",reName);
+                            map.put("receiwer_phone",rePhone);
+                            map.put("receiwer_adress",reAddress);
+                            map.put("send_type",goodType);
+                            map.put("send_weight",goodWeight);
+                            map.put("sender_photo",mServerFileStr);
+
+                            String response2 = PostUtil.sendPost(
+                                    dataUrl,map,"utf-8",mIfJson);
+
+                            String postResult = PostUtil.parseJsonResult(response2,"result");
+                            if (! mCorrectResult.equals(postResult)){
+                                toastMegStep2.obj = "揽件信息上传失败,请检查网络设置";
+                                toastMegStep2.what = CHANGE_TOAST;
+                                myHandler.sendMessage(toastMegStep2);
+                                break;
+                            }
+                            else{
+                                toastMegStep2.obj = "揽件信息上传成功，开始下载寄件码";
+                                toastMegStep2.what = CHANGE_MEDIUM;
+                                mDownloadStr = PostUtil.parseJsonResult(response2,"barcodepath");
+                                myHandler.sendMessage(toastMegStep2);
+                            }
+
+
+                            //下载寄件码
+                            Message toastMegStep3 = Message.obtain();
+                            toastMegStep3.what = CHANGE_TOAST;
+                            if (mCorrectResult.equals(postResult)){
+                                if (isNetworkAvailable(VerifyActivity.this)){
+                                    String localFilePath =PostUtil.getDownloadFile2Cache
+                                            (mDownloadStr,"mailfigure");
+                                    if (!"".equals(localFilePath)){
+                                        mCertStr = localFilePath;
+                                        myHandler.sendEmptyMessage(CHANGE_SUCCESS);
+                                    }
+                                    else{
+                                        toastMegStep3.obj = "下载失败";
+                                        myHandler.sendMessage(toastMegStep3);
+                                    }
+
+                                }
+                                else {
+                                    toastMegStep3.obj = "网络未连接";
+                                    myHandler.sendMessage(toastMegStep3);
+                                }
+
+                            }
+                            break;
                         }
+
+
+
+
+
 
                     }
 
@@ -308,6 +414,17 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
             bDialog.cancel();
         }
 
+    }
+
+    /**
+     * 界面销毁前关闭进度条
+     */
+    @Override
+    protected void onDestroy() {
+        if (bDialog !=null){
+            bDialog.cancel();
+        }
+        super.onDestroy();
     }
 
     /**
@@ -405,7 +522,7 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
 
         /*新建用于存剪裁后图片的文件，并转化为Uri*/
         File tempImageFile = createImageFile();
-        mFilestr = tempImageFile.getPath();
+        mFileStr =  tempImageFile.getPath();
 
         if (tempImageFile != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -417,7 +534,7 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
             }
         }
         Log.d(Constants.TAG, "mSmallUri: " + mSmallUri.toString() );
-        Log.d(Constants.TAG, "mFileStr: " + mFilestr);
+        Log.d(Constants.TAG, "mFileStr: " + mFileStr);
 
         /*File image = new File(getExternalCacheDir() + "/demo.jpg");
         Log.i(TAG, "crop: path " + image.getAbsolutePath());

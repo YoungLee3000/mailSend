@@ -47,11 +47,12 @@ public class PostUtil
      * @param url
      * @param params
      * @param encode
+     * @param ifJson
      * @return
      */
-    public static String sendPost(String url, Map<String,String> params, String encode)
+    public static String sendPost(String url, Map<String,String> params, String encode,boolean ifJson)
     {
-    String data = getRequestData(params, encode).toString();//获得请求体
+    String data = ifJson ? getRequestJSON(params, encode)  :  getRequestData(params, encode);//获得请求体
     //System.out.print(data);
     PrintWriter out = null;
     BufferedReader in = null;
@@ -65,6 +66,7 @@ public class PostUtil
         // 设置通用的请求属性
         conn.setRequestProperty("accept", "*/*");
         conn.setRequestProperty("connection", "Keep-Alive");
+        if (ifJson) conn.setRequestProperty("Content-type","application/json");
         conn.setRequestProperty("user-agent",
                 "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)");
         // 发送POST请求必须设置如下两行
@@ -114,12 +116,38 @@ public class PostUtil
 
 
     /**
+     * 获取json请求体
+     * @param params
+     * @param encode
+     * @return
+     */
+    private static String getRequestJSON(Map<String, String> params, String encode)
+    {
+
+        JSONObject ClientKey = new JSONObject();
+
+        try {
+            for(Map.Entry<String, String> entry : params.entrySet()) {
+
+                ClientKey.put(entry.getKey(),entry.getValue());
+
+            }
+        } catch (Exception e) {
+
+            e.printStackTrace();
+        }
+        return String.valueOf(ClientKey);
+    }
+
+
+
+    /**
      * 获得请求体
      * @param params
      * @param encode
      * @return
      */
-    private static StringBuffer getRequestData(Map<String, String> params, String encode)
+    private static String getRequestData(Map<String, String> params, String encode)
     {
       StringBuffer stringBuffer = new StringBuffer();        //存储封装好的请求体信息
       try {
@@ -134,23 +162,24 @@ public class PostUtil
 
         e.printStackTrace();
       }
-      return stringBuffer;
+      return stringBuffer.toString();
     }
 
 
     /**
      * 解析返回的json结果
      * @param result
+     * @param jsonKey
      * @return
      */
-    public static String parseJsonResult(String result)
+    public static String parseJsonResult(String result , String jsonKey)
     {
 
         String resultStr = "";
 
         try {
             JSONObject jsonObject = (JSONObject) JSON.parse(result);
-            resultStr = jsonObject.getString("resultcode");
+            resultStr = jsonObject.getString(jsonKey);
         } catch (Exception e) {
             e.printStackTrace();
         }

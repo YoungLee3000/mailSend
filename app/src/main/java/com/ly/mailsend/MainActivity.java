@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.text.InputType;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -20,6 +21,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.ly.mailsend.util.Constants;
 import com.ly.mailsend.util.PostUtil;
 
 import java.lang.ref.SoftReference;
@@ -42,7 +44,7 @@ public class MainActivity extends BaseActivity {
 
     private EditText mEditUser;
 
-    private Button mBtnQuery;
+    private Button mBtnQuery,mBtnClear;
 
     private RecyclerView mRVAddress;
 
@@ -51,10 +53,16 @@ public class MainActivity extends BaseActivity {
     private List<MailInfo> mailInfoList = new ArrayList<>();
 
 
-    private String dataUrl = "http://www.gutejersy.com/android/getAddress.php";
+    private boolean mIfJson = true;
 
-//    private String dataUrl = "https://www.nlsmall.com/emsExpress/support.do?sendQuery";
+//    private String dataUrl = "http://www.gutejersy.com/android/getAddress.php";
+
+    private String dataUrl = "http://www.nlsmall.com/emsExpress/support.do?sendQuery";
+
+//    private String dataUrl = "http://192.168.74.131:8080/emsExpress/support.do?sendQuery";
     private MyHandler myHandler = new MyHandler(this);
+
+
 
     private ProgressDialog mDialog;
 
@@ -67,6 +75,8 @@ public class MainActivity extends BaseActivity {
         mEditUser = (EditText) findViewById(R.id.edit_userID);
 
         mBtnQuery = (Button) findViewById(R.id.btn_query);
+
+        mBtnClear = (Button) findViewById(R.id.btn_clear);
 
         mRVAddress = (RecyclerView) findViewById(R.id.rv_address);
 
@@ -87,15 +97,15 @@ public class MainActivity extends BaseActivity {
 
                 Intent intent = new Intent(MainActivity.this,EditInfoActivity.class);
 
-                intent.putExtra("sender name",mailInfo.getSenderName());
-                intent.putExtra("sender phone",mailInfo.getSenderPhone());
-                intent.putExtra("sender address",mailInfo.getSenderAddress());
-                intent.putExtra("receiver name",mailInfo.getReceiverName());
-                intent.putExtra("receiver phone",mailInfo.getReceiverPhone());
-                intent.putExtra("receiver address",mailInfo.getReceiverAddress());
-                intent.putExtra("send type",mailInfo.getSendType());
-                intent.putExtra("send weight",mailInfo.getSendWeight());
-                intent.putExtra("send code",mailInfo.getSendCode());
+                intent.putExtra(Constants.SE_NAME,mailInfo.getSenderName());
+                intent.putExtra(Constants.SE_PHONE,mailInfo.getSenderPhone());
+                intent.putExtra(Constants.SE_ADDRESS,mailInfo.getSenderAddress());
+                intent.putExtra(Constants.RE_NAME,mailInfo.getReceiverName());
+                intent.putExtra(Constants.RE_PHONE,mailInfo.getReceiverPhone());
+                intent.putExtra(Constants.RE_ADDRESS,mailInfo.getReceiverAddress());
+                intent.putExtra(Constants.SE_TYPE,mailInfo.getSendType());
+                intent.putExtra(Constants.SE_WEIGHT,mailInfo.getSendWeight());
+                intent.putExtra(Constants.SE_CODE,mailInfo.getSendCode());
 
                 intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                 startActivity(intent);
@@ -130,7 +140,8 @@ public class MainActivity extends BaseActivity {
 //                        myHandler.sendEmptyMessage(CHANGE_SUCCESS);
 
                         String response = PostUtil.sendPost(
-                                dataUrl,map,"utf-8");
+                                dataUrl,map,"utf-8",mIfJson);
+                        Log.d(Constants.TAG,response);
                         mailInfoList.clear();
                         mailInfoList.addAll(PostUtil.parseJson(response));
 
@@ -141,6 +152,13 @@ public class MainActivity extends BaseActivity {
 
                 }.start();
 
+            }
+        });
+
+        mBtnClear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mEditUser.setText("");
             }
         });
 

@@ -16,7 +16,7 @@
         android:id="@+id/edit_userID"
         app:layout_constraintHorizontal_weight="7"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
         android:layout_marginTop="40dp"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
@@ -37,13 +37,26 @@
         android:layout_below="@id/edit_userID" />
 
 
+    <Button
+        android:id="@+id/btn_clear"
+        android:background="@drawable/set_btn"
+        android:text="清除"
+        android:textSize="22sp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/btn_query" />
+
+
     <View
         android:id="@+id/text_line"
         android:background="@color/gray"
         android:layout_marginTop="10dp"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_below="@id/btn_query"
+        android:layout_below="@id/btn_clear"
         />
 
 
