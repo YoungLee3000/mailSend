@@ -6,8 +6,11 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -41,6 +44,8 @@ public class MainActivity extends BaseActivity {
 
     private static final int CHANGE_FAILURE = 3;
 
+    private static final int CHANGE_BROAD = 4;
+
 
     private EditText mEditUser;
 
@@ -53,24 +58,83 @@ public class MainActivity extends BaseActivity {
     private List<MailInfo> mailInfoList = new ArrayList<>();
 
 
+    //服务器地址
     private boolean mIfJson = true;
-
 //    private String dataUrl = "http://www.gutejersy.com/android/getAddress.php";
-
     private String dataUrl = "http://www.nlsmall.com/emsExpress/support.do?sendQuery";
-
 //    private String dataUrl = "http://192.168.74.131:8080/emsExpress/support.do?sendQuery";
     private MyHandler myHandler = new MyHandler(this);
 
-
-
+    //对话框
     private ProgressDialog mDialog;
+
+
+    //扫码广播相关
+    private static final String ACTION_SCAN_RESULT = "nlscan.action.SCANNER_RESULT";
+    private static final String ACTION_SCAN_RESULT_MAIL = "ACTION_BAR_SCAN";
+
+
+    /**
+     * 普通广播
+     */
+    private BroadcastReceiver mScanReceiver = new BroadcastReceiver(){
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            final String scanResult_1=intent.getStringExtra("SCAN_BARCODE1");
+
+            final String scanStatus=intent.getStringExtra("SCAN_STATE");
+
+
+            if("ok".equals(scanStatus)){
+                Message meg = Message.obtain();
+                meg.what = CHANGE_BROAD;
+                meg.obj = scanResult_1;
+                myHandler.sendMessage(meg);
+            }else{
+
+                Toast.makeText(MainActivity.this,"扫码失败",Toast.LENGTH_SHORT).show();
+            }
+
+        }
+    };
+
+
+    /**
+     * 邮政广播
+     */
+    private BroadcastReceiver  mScanReceiverMail = new BroadcastReceiver(){
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String scanResult_1=intent.getStringExtra("EXTRA_SCAN_DATA");
+            final String scanStatus=intent.getStringExtra("EXTRA_SCAN_STATE");
+
+            if("ok".equals(scanStatus)){
+
+                Message meg = Message.obtain();
+                meg.what = CHANGE_BROAD;
+                meg.obj = scanResult_1;
+                myHandler.sendMessage(meg);
+
+            }else{
+                Toast.makeText(MainActivity.this,"扫码失败",Toast.LENGTH_SHORT).show();
+            }
+
+        }
+    };
+
+
+
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+
+
+
 
         mEditUser = (EditText) findViewById(R.id.edit_userID);
 
@@ -81,8 +145,9 @@ public class MainActivity extends BaseActivity {
         mRVAddress = (RecyclerView) findViewById(R.id.rv_address);
 
 
-        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);//不弹出输入框
 
+        barcodeSet();//设置条码输出
 
         mailInfoAdapter = new MailInfoAdapter(this,mailInfoList);
 
@@ -145,8 +210,13 @@ public class MainActivity extends BaseActivity {
                         mailInfoList.clear();
                         mailInfoList.addAll(PostUtil.parseJson(response));
 
-                        myHandler.sendEmptyMessage(mailInfoList.size() > 0 ?
-                                CHANGE_SUCCESS : CHANGE_FAILURE );
+                        Message toastMeg = Message.obtain();
+                        toastMeg.obj = PostUtil.parseJsonResult(response,"msg");
+                        toastMeg.what = mailInfoList.size() > 0 ?
+                                CHANGE_SUCCESS : CHANGE_FAILURE;
+
+                        myHandler.sendMessage(toastMeg);
+
 
                     }
 
@@ -159,6 +229,8 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
                 mEditUser.setText("");
+                mailInfoList.clear();
+                mailInfoAdapter.notifyDataSetChanged();
             }
         });
 
@@ -167,6 +239,103 @@ public class MainActivity extends BaseActivity {
 
     }
 
+
+
+    //注册广播
+    private void registerResultReceiver() {
+        try {
+
+            IntentFilter scanFilter = new IntentFilter(ACTION_SCAN_RESULT);
+            registerReceiver(mScanReceiver,scanFilter);
+
+            IntentFilter scanFilterMail = new IntentFilter(ACTION_SCAN_RESULT_MAIL);
+            registerReceiver(mScanReceiverMail,scanFilterMail);
+
+        } catch (Exception e) {
+        }
+
+    }
+
+    //注销广播
+    private void unRegisterResultReceiver() {
+        try {
+            unregisterReceiver(mScanReceiver);
+            unregisterReceiver(mScanReceiverMail);
+        } catch (Exception e) {
+        }
+
+    }
+
+
+    /**
+     * 界面唤醒时注册广播
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerResultReceiver();
+    }
+
+    /**
+     * 界面销毁时注销广播
+     */
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unRegisterResultReceiver();
+    }
+
+    /**
+     * 地址查询
+     */
+    private void addressQuery(String str){
+        final String para = str;
+        showLoadingWindow("获取数据中");
+
+        new Thread()
+        {
+            @Override
+            public void run()
+            {
+
+                Map<String,String> map = new HashMap<>();
+                Date d1 = new Date(System.currentTimeMillis());
+                DateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
+                map.put("barcodedata",para);
+                map.put("optime",df.format(d1));
+
+//                        myHandler.sendEmptyMessage(CHANGE_SUCCESS);
+
+                String response = PostUtil.sendPost(
+                        dataUrl,map,"utf-8",mIfJson);
+                Log.d(Constants.TAG,response);
+                mailInfoList.clear();
+                mailInfoList.addAll(PostUtil.parseJson(response));
+
+                Message toastMeg = Message.obtain();
+                toastMeg.obj = PostUtil.parseJsonResult(response,"msg");
+                toastMeg.what = mailInfoList.size() > 0 ?
+                        CHANGE_SUCCESS : CHANGE_FAILURE;
+
+                myHandler.sendMessage(toastMeg);
+
+
+            }
+
+        }.start();
+    }
+
+
+    /**
+     * 条码设置
+     */
+    private void barcodeSet(){
+        Intent intentConfig = new Intent("ACTION_BAR_SCANCFG");
+
+        intentConfig.putExtra("EXTRA_SCAN_MODE", 3);//广播输出
+        intentConfig.putExtra("EXTRA_OUTPUT_EDITOR_ACTION_ENABLE", 0);//不输出软键盘
+        sendBroadcast(intentConfig);
+    }
 
     /**
      * 关闭进度条
@@ -213,7 +382,9 @@ public class MainActivity extends BaseActivity {
         @Override
         public void handleMessage(Message msg){
             final MainActivity mainActivity = mySoftReference.get();
+            String str = (String) msg.obj;
             switch (msg.what) {
+
                 case CHANGE_SUCCESS:
                     mainActivity.cancelDialog();
                     mainActivity.mailInfoAdapter.notifyDataSetChanged();
@@ -222,8 +393,11 @@ public class MainActivity extends BaseActivity {
                     mainActivity.showLoadingWindow("数据查询中");
                     break;
                 case CHANGE_FAILURE:
-                    Toast.makeText(mainActivity,"查询失败",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(mainActivity,str,Toast.LENGTH_SHORT).show();
                     mainActivity.cancelDialog();
+                    break;
+                case CHANGE_BROAD:
+                    mainActivity.addressQuery(str);
                     break;
             }
 

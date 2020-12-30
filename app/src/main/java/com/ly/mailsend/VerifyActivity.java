@@ -284,7 +284,7 @@ public class VerifyActivity extends BaseActivity implements View.OnClickListener
 
                             String postResult = PostUtil.parseJsonResult(response2,"result");
                             if (! mCorrectResult.equals(postResult)){
-                                toastMegStep2.obj = "揽件信息上传失败,请检查网络设置";
+                                toastMegStep2.obj = postResult;
                                 toastMegStep2.what = CHANGE_TOAST;
                                 myHandler.sendMessage(toastMegStep2);
                                 break;

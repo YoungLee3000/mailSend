@@ -6,7 +6,16 @@
     android:layout_height="match_parent"
     android:layout_gravity="center"
     android:gravity="center"
-    tools:context=".QRCodeActivity">
+    tools:context=".QRCodeActivity"
+    android:orientation="vertical">
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="可通过蓝牙打印机打印该二维码"
+        android:textSize="20sp"
+        android:layout_marginBottom="20dp"/>
 
 
     <ImageView
